@@ -172,13 +172,17 @@ func (s *Store) Commit(req CommitRequest) (IdempotencyResult, error) {
 		next.CredentialIDs[req.Case.Credential.ID] = req.Case.ID
 		next.CredentialSequences[req.Case.Credential.Sequence] = req.Case.ID
 	}
-	if err = appendAudit(s.auditPath, event); err != nil {
+	written, err := appendAudit(s.auditPath, event)
+	if err != nil {
 		return IdempotencyResult{}, err
 	}
-	s.audit = append(s.audit, event)
 	if err = writeSnapshot(s.snapshotPath, next); err != nil {
-		return IdempotencyResult{}, fmt.Errorf("审计已追加但快照提交失败: %w", err)
+		if rbErr := rollbackAudit(s.auditPath, written); rbErr != nil {
+			return IdempotencyResult{}, fmt.Errorf("快照提交失败且审计回滚失败: snapshot=%w rollback=%v", err, rbErr)
+		}
+		return IdempotencyResult{}, fmt.Errorf("快照提交失败: %w", err)
 	}
+	s.audit = append(s.audit, event)
 	s.state = next
 	return result, nil
 }

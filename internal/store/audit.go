@@ -31,21 +31,70 @@ func eventDigest(e AuditEvent) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func appendAudit(path string, e AuditEvent) error {
+// appendAudit appends a single audit event to the append-only log and returns
+// the number of bytes written for the event so callers can roll back the
+// append if a subsequent step fails. If encoding or syncing fails, any partial
+// bytes written are truncated so the log remains parseable.
+func appendAudit(path string, e AuditEvent) (int, error) {
+	before, err := fileSize(path)
+	if err != nil {
+		return 0, err
+	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	enc := json.NewEncoder(f)
 	if err = enc.Encode(e); err != nil {
 		f.Close()
-		return err
+		_ = os.Truncate(path, before)
+		return 0, err
 	}
 	if err = f.Sync(); err != nil {
 		f.Close()
+		_ = os.Truncate(path, before)
+		return 0, err
+	}
+	if err = f.Close(); err != nil {
+		_ = os.Truncate(path, before)
+		return 0, err
+	}
+	after, err := fileSize(path)
+	if err != nil {
+		return 0, err
+	}
+	return int(after - before), nil
+}
+
+// rollbackAudit truncates the audit log back to the byte offset produced before
+// the corresponding appendAudit call, restoring the previous consistent state.
+func rollbackAudit(path string, written int) error {
+	if written <= 0 {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
-	return f.Close()
+	target := info.Size() - int64(written)
+	if target < 0 {
+		target = 0
+	}
+	return os.Truncate(path, target)
+}
+
+func fileSize(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return info.Size(), nil
 }
 
 func readAudit(path string) ([]AuditEvent, error) {
