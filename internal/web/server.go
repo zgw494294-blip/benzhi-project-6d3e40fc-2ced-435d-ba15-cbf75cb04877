@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"voice-clarity-acceptance/internal/workflow"
 )
@@ -16,6 +17,7 @@ type Server struct {
 	service    *workflow.Service
 	mux        *http.ServeMux
 	assetCache map[string][]byte
+	assetMu    sync.RWMutex
 }
 
 func New(service *workflow.Service) http.Handler {
@@ -68,7 +70,9 @@ func (s *Server) WorkbenchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	const asset = "static/index.html"
+	s.assetMu.RLock()
 	b, ok := s.assetCache[asset]
+	s.assetMu.RUnlock()
 	if !ok {
 		var err error
 		b, err = staticFiles.ReadFile(asset)
@@ -76,7 +80,16 @@ func (s *Server) WorkbenchHandler(w http.ResponseWriter, r *http.Request) {
 			writeError(w, err)
 			return
 		}
-		s.assetCache[asset] = b
+		s.assetMu.Lock()
+		// Another goroutine may have populated the cache while this one read
+		// the file; keep the first cached value so all callers return bytes
+		// from a single ReadFile.
+		if cached, cachedOK := s.assetCache[asset]; cachedOK {
+			b = cached
+		} else {
+			s.assetCache[asset] = b
+		}
+		s.assetMu.Unlock()
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(b)
