@@ -33,7 +33,7 @@ type ExecutionCommand struct {
 func (s *Service) AddExecution(cmd ExecutionCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, e := s.existing(cmd.IdempotencyKey, "add_execution"); ok || e != nil {
+	if c, ok, e := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "add_execution"); ok || e != nil {
 		return c, e
 	}
 	c, e := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -124,7 +124,7 @@ type ResolveIssueCommand struct {
 func (s *Service) ResolveIssue(cmd ResolveIssueCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, e := s.existing(cmd.IdempotencyKey, "resolve_review_issue"); ok || e != nil {
+	if c, ok, e := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "resolve_review_issue"); ok || e != nil {
 		return c, e
 	}
 	c, e := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)

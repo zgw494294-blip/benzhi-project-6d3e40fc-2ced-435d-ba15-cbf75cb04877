@@ -18,7 +18,7 @@ type SavePlanCommand struct {
 func (s *Service) SavePlan(cmd SavePlanCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "save_plan"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "save_plan"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -123,7 +123,7 @@ type RestorePlanCommand struct {
 func (s *Service) RestorePlan(cmd RestorePlanCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, e := s.existing(cmd.IdempotencyKey, "restore_plan"); ok || e != nil {
+	if c, ok, e := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "restore_plan"); ok || e != nil {
 		return c, e
 	}
 	c, e := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -176,7 +176,7 @@ func (s *Service) PrecheckPlan(caseID string) (measurement.PlanPrecheck, error) 
 func (s *Service) FreezePlan(cmd FreezePlanCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "freeze_plan"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "freeze_plan"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)

@@ -18,7 +18,7 @@ type ReviewCommand struct {
 func (s *Service) Review(cmd ReviewCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "review"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "review"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)

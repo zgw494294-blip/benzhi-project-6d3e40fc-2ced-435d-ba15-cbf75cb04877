@@ -48,7 +48,7 @@ func (s *Service) RetestCandidates(caseID, zoneID string) ([]measurement.RetestC
 func (s *Service) AddReading(cmd AddReadingCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "add_reading"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "add_reading"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -77,7 +77,7 @@ func (s *Service) AddReading(cmd AddReadingCommand) (*domain.AcceptanceCase, err
 func (s *Service) AddReadings(cmd AddReadingsCommand) (*BatchReadingResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if prior, ok, err := s.existing(cmd.IdempotencyKey, "add_readings"); ok || err != nil {
+	if prior, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "add_readings"); ok || err != nil {
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +165,7 @@ type CorrectReadingCommand struct {
 func (s *Service) CorrectReading(cmd CorrectReadingCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "correct_reading"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "correct_reading"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -218,7 +218,7 @@ type CloseRoundCommand struct {
 func (s *Service) CloseRound(cmd CloseRoundCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "close_round"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "close_round"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
@@ -265,7 +265,7 @@ type CreateDeviationCommand struct {
 func (s *Service) CreateDeviation(cmd CreateDeviationCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "create_deviation"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "create_deviation"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)

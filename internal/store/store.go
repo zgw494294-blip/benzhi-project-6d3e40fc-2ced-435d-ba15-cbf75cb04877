@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 	"voice-clarity-acceptance/internal/domain"
@@ -83,7 +84,17 @@ func (s *Store) ListCases() ([]*domain.AcceptanceCase, error) {
 func (s *Store) FindIdempotency(key string) (IdempotencyResult, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	r, ok := s.state.Idempotency[key]
+	for k, r := range s.state.Idempotency {
+		if idempotencySuffix(k) == key {
+			return r, true
+		}
+	}
+	return IdempotencyResult{}, false
+}
+func (s *Store) FindIdempotencyForCase(caseID, key string) (IdempotencyResult, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	r, ok := s.state.Idempotency[idempotencyKey(caseID, key)]
 	return r, ok
 }
 func (s *Store) CaseNumberExists(number string) bool {
@@ -124,7 +135,8 @@ func (s *Store) Commit(req CommitRequest) (IdempotencyResult, error) {
 	if req.IdempotencyKey == "" {
 		return IdempotencyResult{}, &domain.FieldError{Field: "idempotencyKey", Message: "不能为空"}
 	}
-	if prior, ok := s.state.Idempotency[req.IdempotencyKey]; ok {
+	idemKey := idempotencyKey(req.Case.ID, req.IdempotencyKey)
+	if prior, ok := s.state.Idempotency[idemKey]; ok {
 		return prior, nil
 	}
 	if old, ok := s.state.Cases[req.Case.ID]; ok && old.Version >= req.Case.Version {
@@ -157,7 +169,7 @@ func (s *Store) Commit(req CommitRequest) (IdempotencyResult, error) {
 	next.Cases[req.Case.ID] = caseCopy
 	next.CaseNumbers[req.Case.CaseNumber] = req.Case.ID
 	result := IdempotencyResult{CaseID: req.Case.ID, Operation: req.Operation, Version: req.Case.Version, Response: response, CommittedAt: now}
-	next.Idempotency[req.IdempotencyKey] = result
+	next.Idempotency[idemKey] = result
 	next.AuditSequence = event.Sequence
 	next.LastAuditDigest = event.Digest
 	next.SavedAt = now
@@ -257,6 +269,15 @@ func copyIdempotency(in map[string]IdempotencyResult) map[string]IdempotencyResu
 		out[k] = v
 	}
 	return out
+}
+func idempotencyKey(caseID, key string) string {
+	return caseID + "\x1f" + key
+}
+func idempotencySuffix(k string) string {
+	if i := strings.Index(k, "\x1f"); i >= 0 {
+		return k[i+1:]
+	}
+	return k
 }
 
 func (s *Store) AuditForCase(caseID string) []AuditEvent {

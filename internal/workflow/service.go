@@ -34,10 +34,19 @@ func (s *Service) ListCases() ([]*domain.AcceptanceCase, error)      { return s.
 func (s *Service) Audit(id string) []store.AuditEvent                { return s.store.AuditForCase(id) }
 
 func (s *Service) existing(key, operation string) (*domain.AcceptanceCase, bool, error) {
+	return s.existingForCase("", key, operation)
+}
+func (s *Service) existingForCase(caseID, key, operation string) (*domain.AcceptanceCase, bool, error) {
 	if key == "" {
 		return nil, false, &domain.FieldError{Field: "idempotencyKey", Message: "不能为空"}
 	}
-	prior, ok := s.store.FindIdempotency(key)
+	var prior store.IdempotencyResult
+	var ok bool
+	if caseID == "" {
+		prior, ok = s.store.FindIdempotency(key)
+	} else {
+		prior, ok = s.store.FindIdempotencyForCase(caseID, key)
+	}
 	if !ok {
 		return nil, false, nil
 	}

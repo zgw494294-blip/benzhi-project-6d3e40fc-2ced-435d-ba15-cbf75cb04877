@@ -57,7 +57,7 @@ type UpdateScopeCommand struct {
 func (s *Service) UpdateScope(cmd UpdateScopeCommand) (*domain.AcceptanceCase, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, ok, err := s.existing(cmd.IdempotencyKey, "update_scope"); ok || err != nil {
+	if c, ok, err := s.existingForCase(cmd.CaseID, cmd.IdempotencyKey, "update_scope"); ok || err != nil {
 		return c, err
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
