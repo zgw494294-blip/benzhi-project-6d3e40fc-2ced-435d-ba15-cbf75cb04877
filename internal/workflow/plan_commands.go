@@ -7,6 +7,21 @@ import (
 	"voice-clarity-acceptance/internal/measurement"
 )
 
+func clonePlanRevisions(in []domain.PlanRevisionSnapshot) []domain.PlanRevisionSnapshot {
+	if in == nil {
+		return nil
+	}
+	out := make([]domain.PlanRevisionSnapshot, len(in))
+	for i := range in {
+		out[i] = in[i]
+		if len(in[i].Points) > 0 {
+			out[i].Points = make([]domain.MeasurementPoint, len(in[i].Points))
+			copy(out[i].Points, in[i].Points)
+		}
+	}
+	return out
+}
+
 type PointInput struct{ ID, ZoneID, PointCode, LocationDescription, CoverageTag string }
 type SavePlanCommand struct {
 	CaseID                string
@@ -60,14 +75,15 @@ func (s *Service) PlanRevisions(caseID string) ([]domain.PlanRevisionSnapshot, e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if revisions, ok := s.planRevisionCache[caseID]; ok {
-		return revisions, nil
+		return clonePlanRevisions(revisions), nil
 	}
 	c, e := s.store.GetCase(caseID)
 	if e != nil {
 		return nil, e
 	}
-	s.planRevisionCache[caseID] = c.PlanRevisions
-	return c.PlanRevisions, nil
+	cached := clonePlanRevisions(c.PlanRevisions)
+	s.planRevisionCache[caseID] = cached
+	return clonePlanRevisions(cached), nil
 }
 func (s *Service) ComparePlanRevisions(caseID string, a, b int) (PlanRevisionDiff, error) {
 	c, e := s.store.GetCase(caseID)
