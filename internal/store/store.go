@@ -274,9 +274,19 @@ func (s *Store) AuditForCase(caseID string) []AuditEvent {
 func auditEventSnapshot(e AuditEvent) AuditEvent {
 	return AuditEvent{
 		Sequence: e.Sequence, CaseID: e.CaseID, Type: e.Type, Actor: e.Actor,
-		CaseVersion: e.CaseVersion, OccurredAt: e.OccurredAt, Details: e.Details,
+		CaseVersion: e.CaseVersion, OccurredAt: e.OccurredAt, Details: cloneRawMessage(e.Details),
 		PreviousDigest: e.PreviousDigest, Digest: e.Digest,
 	}
+}
+
+// cloneRawMessage returns a detached copy of a JSON byte slice so callers cannot
+// mutate the Store's internal audit material through the returned snapshot. A nil
+// input is preserved as nil to keep digest-equality semantics identical.
+func cloneRawMessage(b json.RawMessage) json.RawMessage {
+	if b == nil {
+		return nil
+	}
+	return append([]byte(nil), b...)
 }
 func (s *Store) VerifyAudit() error {
 	s.mu.RLock()
