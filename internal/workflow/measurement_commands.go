@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -81,7 +82,7 @@ func (s *Service) AddReadings(cmd AddReadingsCommand) (*BatchReadingResult, erro
 		if err != nil {
 			return nil, err
 		}
-		return &BatchReadingResult{Case: prior}, nil
+		return s.replayBatchResult(prior, cmd.IdempotencyKey)
 	}
 	c, err := s.loadForWrite(cmd.CaseID, cmd.ExpectedVersion)
 	if err != nil {
@@ -137,9 +138,6 @@ func (s *Service) AddReadings(cmd AddReadingsCommand) (*BatchReadingResult, erro
 	round.Readings = append(round.Readings, newReadings...)
 	c.Status = domain.StatusMeasuring
 	c.Touch(s.now())
-	if err := commit(s, c, "add_readings", cmd.IdempotencyKey, cmd.Actor, "readings.batch_recorded", map[string]any{"roundID": cmd.RoundID, "submitted": len(newReadings), "invalid": invalid}); err != nil {
-		return nil, err
-	}
 	remaining := 0
 	for _, id := range round.TargetPointIDs {
 		found := false
@@ -153,7 +151,59 @@ func (s *Service) AddReadings(cmd AddReadingsCommand) (*BatchReadingResult, erro
 			remaining++
 		}
 	}
+	if err := commit(s, c, "add_readings", cmd.IdempotencyKey, cmd.Actor, "readings.batch_recorded", map[string]any{"roundID": cmd.RoundID, "submitted": len(newReadings), "invalid": invalid, "remaining": remaining}); err != nil {
+		return nil, err
+	}
 	return &BatchReadingResult{Case: c, Submitted: len(newReadings), Invalid: invalid, Remaining: remaining}, nil
+}
+
+// replayBatchResult reconstructs the batch reading counts that were recorded for
+// the original add_readings commit so that idempotent retries return the same
+// Submitted/Invalid/Remaining values rather than zeros. The case returned by the
+// idempotency lookup may have evolved since the original commit, so the counts
+// are recovered from the persisted audit event details rather than recomputed
+// from the current case state.
+func (s *Service) replayBatchResult(c *domain.AcceptanceCase, key string) (*BatchReadingResult, error) {
+	res := &BatchReadingResult{Case: c}
+	prior, ok := s.store.FindIdempotency(key)
+	if !ok {
+		return res, nil
+	}
+	for _, e := range s.store.AuditForCase(prior.CaseID) {
+		if e.Type != "readings.batch_recorded" || e.CaseVersion != prior.Version {
+			continue
+		}
+		var details map[string]any
+		if err := json.Unmarshal(e.Details, &details); err != nil || details == nil {
+			break
+		}
+		if v, ok := details["submitted"]; ok {
+			res.Submitted = toInt(v)
+		}
+		if v, ok := details["invalid"]; ok {
+			res.Invalid = toInt(v)
+		}
+		if v, ok := details["remaining"]; ok {
+			res.Remaining = toInt(v)
+		}
+		break
+	}
+	return res, nil
+}
+
+func toInt(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case json.Number:
+		i, _ := n.Int64()
+		return int(i)
+	}
+	return 0
 }
 
 type CorrectReadingCommand struct {
