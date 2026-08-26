@@ -175,11 +175,11 @@ func (s *Store) Commit(req CommitRequest) (IdempotencyResult, error) {
 	if err = appendAudit(s.auditPath, event); err != nil {
 		return IdempotencyResult{}, err
 	}
+	s.audit = append(s.audit, event)
 	if err = writeSnapshot(s.snapshotPath, next); err != nil {
 		return IdempotencyResult{}, fmt.Errorf("审计已追加但快照提交失败: %w", err)
 	}
 	s.state = next
-	s.audit = append(s.audit, event)
 	return result, nil
 }
 func copySequences(in map[uint64]string) map[uint64]string {
