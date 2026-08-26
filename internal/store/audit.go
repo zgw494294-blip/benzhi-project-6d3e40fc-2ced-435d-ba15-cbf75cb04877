@@ -31,21 +31,15 @@ func eventDigest(e AuditEvent) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func appendAudit(path string, e AuditEvent) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-	if err != nil {
-		return err
-	}
+func appendAudit(f *os.File, e AuditEvent) error {
 	enc := json.NewEncoder(f)
-	if err = enc.Encode(e); err != nil {
-		f.Close()
+	if err := enc.Encode(e); err != nil {
 		return err
 	}
-	if err = f.Sync(); err != nil {
-		f.Close()
+	if err := f.Sync(); err != nil {
 		return err
 	}
-	return f.Close()
+	return nil
 }
 
 func readAudit(path string) ([]AuditEvent, error) {

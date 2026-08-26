@@ -14,6 +14,7 @@ import (
 type Store struct {
 	mu                           sync.RWMutex
 	dir, snapshotPath, auditPath string
+	auditFile                    *os.File
 	state                        Snapshot
 	audit                        []AuditEvent
 }
@@ -54,7 +55,11 @@ func Open(dir string) (*Store, error) {
 	if err := validateCredentialIndexes(s); err != nil {
 		return nil, err
 	}
-	return &Store{dir: dir, snapshotPath: snapshotPath, auditPath: auditPath, state: s, audit: events}, nil
+	auditFile, err := os.OpenFile(auditPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{dir: dir, snapshotPath: snapshotPath, auditPath: auditPath, auditFile: auditFile, state: s, audit: events}, nil
 }
 
 func (s *Store) GetCase(id string) (*domain.AcceptanceCase, error) {
@@ -172,7 +177,7 @@ func (s *Store) Commit(req CommitRequest) (IdempotencyResult, error) {
 		next.CredentialIDs[req.Case.Credential.ID] = req.Case.ID
 		next.CredentialSequences[req.Case.Credential.Sequence] = req.Case.ID
 	}
-	if err = appendAudit(s.auditPath, event); err != nil {
+	if err = appendAudit(s.auditFile, event); err != nil {
 		return IdempotencyResult{}, err
 	}
 	if err = writeSnapshot(s.snapshotPath, next); err != nil {
