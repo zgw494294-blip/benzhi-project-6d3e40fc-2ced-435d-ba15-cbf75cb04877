@@ -265,10 +265,18 @@ func (s *Store) AuditForCase(caseID string) []AuditEvent {
 	out := []AuditEvent{}
 	for _, e := range s.audit {
 		if e.CaseID == caseID {
-			out = append(out, e)
+			out = append(out, auditEventSnapshot(e))
 		}
 	}
 	return out
+}
+
+func auditEventSnapshot(e AuditEvent) AuditEvent {
+	return AuditEvent{
+		Sequence: e.Sequence, CaseID: e.CaseID, Type: e.Type, Actor: e.Actor,
+		CaseVersion: e.CaseVersion, OccurredAt: e.OccurredAt, Details: e.Details,
+		PreviousDigest: e.PreviousDigest, Digest: e.Digest,
+	}
 }
 func (s *Store) VerifyAudit() error {
 	s.mu.RLock()
