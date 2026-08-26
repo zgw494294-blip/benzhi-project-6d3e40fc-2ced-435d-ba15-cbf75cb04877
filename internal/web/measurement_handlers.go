@@ -56,7 +56,7 @@ func (s *Server) AddReadingHandler(w http.ResponseWriter, r *http.Request) {
 		}{result.Case, result.Submitted, result.Invalid, result.Remaining})
 		return
 	}
-	c, err := s.service.AddReading(workflow.AddReadingCommand{CaseID: r.PathValue("caseID"), RoundID: r.PathValue("roundID"), PointID: body.PointID, ExpectedVersion: body.ExpectedVersion, IdempotencyKey: body.IdempotencyKey, Actor: actor(r), BackgroundNoiseDBA: body.BackgroundNoiseDBA, BroadcastLevelDBA: body.BroadcastLevelDBA, IntelligibilityValue: body.IntelligibilityValue, InstrumentID: body.InstrumentID, MeasuredAt: body.MeasuredAt})
+	c, err := s.service.AddReading(workflow.AddReadingCommand{CaseID: r.PathValue("caseID"), RoundID: r.PathValue("roundID"), PointID: body.PointID, ExpectedVersion: body.ExpectedVersion, IdempotencyKey: body.IdempotencyKey, Actor: actor(r), BackgroundNoiseDBA: body.BackgroundNoiseDBA, BroadcastLevelDBA: body.BroadcastLevelDBA, IntelligibilityValue: body.IntelligibilityValue, InstrumentID: body.InstrumentID, MeasuredAt: body.MeasuredAt, Context: r.Context()})
 	if err != nil {
 		writeError(w, err)
 		return

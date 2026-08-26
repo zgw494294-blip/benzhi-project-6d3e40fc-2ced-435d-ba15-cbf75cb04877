@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ type AddReadingCommand struct {
 	BackgroundNoiseDBA, BroadcastLevelDBA, IntelligibilityValue float64
 	InstrumentID                                                string
 	MeasuredAt                                                  time.Time
+	Context                                                     context.Context
 }
 
 type ReadingEntry struct {
