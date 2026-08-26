@@ -87,7 +87,7 @@ func (s *Service) Review(cmd ReviewCommand) (*domain.AcceptanceCase, error) {
 		if err != nil {
 			return nil, err
 		}
-		seq := s.store.NextCredentialSequence()
+		seq := s.nextCredentialSequence
 		material := sha256.Sum256([]byte(c.ID + digest + reviewer))
 		credential = &domain.AcceptanceCredential{ID: "credential_" + hex.EncodeToString(material[:8]), CaseID: c.ID, CaseVersion: c.Version + 1, Decision: "approved", Reviewer: reviewer, IssuedAt: now, Sequence: seq, SnapshotDigest: digest, PreviousAuditDigest: s.store.LastAuditDigest()}
 	}
@@ -100,6 +100,9 @@ func (s *Service) Review(cmd ReviewCommand) (*domain.AcceptanceCase, error) {
 	}
 	if err = commit(s, c, "review", cmd.IdempotencyKey, reviewer, event, map[string]any{"decision": decision, "credential": credential, "issueCount": len(record.Issues), "issues": record.Issues}); err != nil {
 		return nil, err
+	}
+	if credential != nil {
+		s.nextCredentialSequence++
 	}
 	return c, nil
 }

@@ -12,13 +12,18 @@ import (
 type Clock func() time.Time
 
 type Service struct {
-	mu    sync.Mutex
-	store *store.Store
-	now   Clock
+	mu                     sync.Mutex
+	store                  *store.Store
+	now                    Clock
+	nextCredentialSequence uint64
 }
 
 func New(s *store.Store) *Service {
-	return &Service{store: s, now: func() time.Time { return time.Now().UTC() }}
+	return &Service{
+		store:                  s,
+		now:                    func() time.Time { return time.Now().UTC() },
+		nextCredentialSequence: s.NextCredentialSequence(),
+	}
 }
 
 func newID(prefix string) string {
