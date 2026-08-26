@@ -13,12 +13,13 @@ import (
 var staticFiles embed.FS
 
 type Server struct {
-	service *workflow.Service
-	mux     *http.ServeMux
+	service    *workflow.Service
+	mux        *http.ServeMux
+	assetCache map[string][]byte
 }
 
 func New(service *workflow.Service) http.Handler {
-	s := &Server{service: service, mux: http.NewServeMux()}
+	s := &Server{service: service, mux: http.NewServeMux(), assetCache: make(map[string][]byte)}
 	s.routes()
 	return s.recoverPanic(s.securityHeaders(s.requestLimit(s.mux)))
 }
@@ -66,10 +67,16 @@ func (s *Server) WorkbenchHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	b, err := staticFiles.ReadFile("static/index.html")
-	if err != nil {
-		writeError(w, err)
-		return
+	const asset = "static/index.html"
+	b, ok := s.assetCache[asset]
+	if !ok {
+		var err error
+		b, err = staticFiles.ReadFile(asset)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		s.assetCache[asset] = b
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(b)
