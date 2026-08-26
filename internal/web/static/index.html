@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>语音可懂度验收工作台</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="brand-mark">VC</span><strong>语音可懂度验收工作台</strong></div>
+    <div class="health"><span id="healthDot"></span><span id="healthText">连接中</span></div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <button id="newCaseButton" class="primary wide">＋ 新建验收案</button>
+      <div class="sidebar-title">验收案</div>
+      <div class="case-filters"><input id="caseKeyword" placeholder="编号、建筑或负责人"><select id="caseStatus"><option value="">全部状态</option><option value="draft">草稿</option><option value="measuring">测量</option><option value="remediation">整改</option><option value="pending_review">待审核</option><option value="returned">退回</option><option value="approved">已批准</option></select><select id="caseSort"><option value="updatedAt">最近更新</option><option value="createdAt">创建时间</option><option value="caseNumber">验收案编号</option></select></div>
+      <div id="caseList" class="case-list"><p class="muted">正在加载…</p></div>
+    </aside>
+    <main>
+      <div id="notice" class="notice hidden" role="status"></div>
+      <section id="welcome" class="welcome panel">
+        <p class="eyebrow">公共建筑应急广播</p>
+        <h1>把现场读数变成可校验的验收凭据</h1>
+        <p>按建案、冻结测点、采集判定、整改复测、人工审核和凭据封存的顺序完成闭环。</p>
+        <button id="welcomeCreate" class="primary">创建第一份验收案</button>
+      </section>
+
+      <section id="createPanel" class="panel hidden">
+        <div class="section-head"><div><p class="eyebrow">步骤 1</p><h2>创建验收案</h2></div><button class="ghost" data-action="cancel-create">取消</button></div>
+        <form id="createForm" class="form-grid">
+          <label>验收编号<input name="caseNumber" required placeholder="例如 EB-2026-001"></label>
+          <label>建筑名称<input name="siteName" required placeholder="例如 市民服务中心"></label>
+          <label>负责工程师<input name="responsibleEngineer" required></label>
+          <div class="subhead">首个广播区域</div>
+          <label>区域名称<input name="zoneName" required placeholder="例如 一层候梯厅"></label>
+          <label>用途类别<input name="usageClass" required placeholder="例如 公共大厅"></label>
+          <label>覆盖面积（㎡）<input name="area" type="number" min="1" step="0.1" value="120" required></label>
+          <label>最少测点数<input name="minimum" type="number" min="1" value="2" required></label>
+          <label>可懂度阈值<input name="threshold" type="number" min="0.3" max="1" step="0.01" value="0.60" required></label>
+          <label class="span-2">区域备注<input name="notes" placeholder="可选"></label>
+          <div class="span-2 actions"><button class="primary" type="submit">创建草稿</button></div>
+        </form>
+      </section>
+
+      <section id="casePanel" class="hidden">
+        <div class="case-heading panel">
+          <div><p id="caseNumber" class="eyebrow"></p><h1 id="siteName"></h1><p id="caseMeta" class="muted"></p></div>
+          <div class="status-block"><span id="caseStatus" class="status"></span><span id="caseVersion" class="version"></span></div>
+        </div>
+        <nav id="tabs" class="tabs">
+          <button data-tab="scope" class="active">基础范围</button><button data-tab="plan">测点计划</button><button data-tab="readings">现场测量</button><button data-tab="deviation">整改复测</button><button data-tab="review">审核凭据</button><button data-tab="audit">审计轨迹</button>
+        </nav>
+        <section id="tab-scope" class="panel tab-panel"></section>
+        <section id="tab-plan" class="panel tab-panel hidden"></section>
+        <section id="tab-readings" class="panel tab-panel hidden"></section>
+        <section id="tab-deviation" class="panel tab-panel hidden"></section>
+        <section id="tab-review" class="panel tab-panel hidden"></section>
+        <section id="tab-audit" class="panel tab-panel hidden"></section>
+      </section>
+    </main>
+  </div>
+  <template id="pointRowTemplate">
+    <div class="point-row">
+      <select data-field="zoneID" aria-label="所属区域"></select>
+      <input data-field="pointCode" placeholder="编号，如 P-01">
+      <input data-field="locationDescription" placeholder="具体位置">
+      <input data-field="coverageTag" placeholder="覆盖标签，如 north">
+      <button type="button" class="danger small" data-action="remove-point">移除</button>
+    </div>
+  </template>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
