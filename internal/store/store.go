@@ -71,11 +71,8 @@ func (s *Store) ListCases() ([]*domain.AcceptanceCase, error) {
 	defer s.mu.RUnlock()
 	out := make([]*domain.AcceptanceCase, 0, len(s.state.Cases))
 	for _, c := range s.state.Cases {
-		x, err := cloneCase(c)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, x)
+		x := *c
+		out = append(out, &x)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out, nil
