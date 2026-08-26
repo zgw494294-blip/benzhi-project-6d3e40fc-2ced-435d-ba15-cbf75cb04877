@@ -44,6 +44,7 @@ func (s *Service) SavePlan(cmd SavePlanCommand) (*domain.AcceptanceCase, error) 
 	if err = commit(s, c, "save_plan", cmd.IdempotencyKey, cmd.Actor, "plan.saved", map[string]any{"pointCount": len(points), "revision": c.PlanRevision}); err != nil {
 		return nil, err
 	}
+	delete(s.planRevisionCache, c.ID)
 	return c, nil
 }
 
@@ -56,10 +57,16 @@ type PlanRevisionDiff struct {
 }
 
 func (s *Service) PlanRevisions(caseID string) ([]domain.PlanRevisionSnapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if revisions, ok := s.planRevisionCache[caseID]; ok {
+		return revisions, nil
+	}
 	c, e := s.store.GetCase(caseID)
 	if e != nil {
 		return nil, e
 	}
+	s.planRevisionCache[caseID] = c.PlanRevisions
 	return c.PlanRevisions, nil
 }
 func (s *Service) ComparePlanRevisions(caseID string, a, b int) (PlanRevisionDiff, error) {
@@ -151,6 +158,7 @@ func (s *Service) RestorePlan(cmd RestorePlanCommand) (*domain.AcceptanceCase, e
 	if e = commit(s, c, "restore_plan", cmd.IdempotencyKey, cmd.Actor, "plan.restored", map[string]any{"sourceRevision": cmd.Revision}); e != nil {
 		return nil, e
 	}
+	delete(s.planRevisionCache, c.ID)
 	return c, nil
 }
 
