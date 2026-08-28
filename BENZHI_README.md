@@ -1,6 +1,6 @@
 # BENZHI_README
 
-基于 Go 实现的voice-clarity-acceptance Web 项目，一款后端服务，用于支持voice-clarity-acceptance的核心业务流程。
+基于 Go 实现的应急广播语音可懂度验收 Web 项目，一款后端服务，用于管理广播区域测点、现场读数、整改复测和验收凭据。
 
 ## 项目说明
 - 项目：benzhi-project-6d3e40fc-2ced-435d-ba15-cbf75cb04877
